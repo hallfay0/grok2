@@ -596,11 +596,14 @@
     }
     ffmpegLoading = true;
     try {
-      if (typeof FFmpegCtor === 'function' && FFmpegCtor.prototype && FFmpegCtor.prototype.load) {
-        ffmpegInstance = new FFmpegCtor();
-        await ffmpegInstance.load();
-      } else if (typeof FFmpegCtor === 'function') {
-        ffmpegInstance = FFmpegCtor({ log: false });
+      if (typeof FFmpegCtor === 'function') {
+        try {
+          // 兼容 @ffmpeg/ffmpeg 0.12+ 的 class FFmpeg
+          ffmpegInstance = new FFmpegCtor();
+        } catch (e) {
+          // 回退兼容 createFFmpeg 工厂模式
+          ffmpegInstance = FFmpegCtor({ log: false });
+        }
         if (ffmpegInstance && typeof ffmpegInstance.load === 'function') {
           await ffmpegInstance.load();
         }
