@@ -690,8 +690,29 @@
     ffmpegLoading = false;
   }
 
+  function toStableUint8(input) {
+    if (input instanceof Uint8Array) {
+      return new Uint8Array(input);
+    }
+    if (input instanceof ArrayBuffer) {
+      return new Uint8Array(input.slice(0));
+    }
+    if (ArrayBuffer.isView(input)) {
+      const view = input;
+      const start = view.byteOffset || 0;
+      const end = start + (view.byteLength || 0);
+      return new Uint8Array(view.buffer.slice(start, end));
+    }
+    throw new Error('binary_input_invalid');
+  }
+
+  function toStableArrayBuffer(input) {
+    return toStableUint8(input).buffer;
+  }
+
   async function sha256Hex(bytes) {
-    const hashBuffer = await crypto.subtle.digest('SHA-256', bytes);
+    const stableBytes = toStableUint8(bytes);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', stableBytes);
     return Array.from(new Uint8Array(hashBuffer)).map((b) => b.toString(16).padStart(2, '0')).join('');
   }
 
@@ -700,15 +721,17 @@
     if (!resp.ok) {
       throw new Error(`fetch_failed_${resp.status}`);
     }
-    return await resp.arrayBuffer();
+    const raw = await resp.arrayBuffer();
+    return raw.slice(0);
   }
 
   async function ffmpegWriteFile(ff, name, data) {
+    const stable = toStableUint8(data);
     if (typeof ff.writeFile === 'function') {
-      return await ff.writeFile(name, new Uint8Array(data));
+      return await ff.writeFile(name, stable);
     }
     if (ff.FS) {
-      ff.FS('writeFile', name, new Uint8Array(data));
+      ff.FS('writeFile', name, stable);
       return;
     }
     throw new Error('ffmpeg_writefile_unsupported');
@@ -717,13 +740,11 @@
   async function ffmpegReadFile(ff, name) {
     if (typeof ff.readFile === 'function') {
       const out = await ff.readFile(name);
-      const view = out instanceof Uint8Array ? out : new Uint8Array(out);
-      return new Uint8Array(view);
+      return toStableUint8(out);
     }
     if (ff.FS) {
       const out = ff.FS('readFile', name);
-      const view = out instanceof Uint8Array ? out : new Uint8Array(out);
-      return new Uint8Array(view);
+      return toStableUint8(out);
     }
     throw new Error('ffmpeg_readfile_unsupported');
   }
@@ -1453,11 +1474,12 @@
       dataUrl: frameResult.dataUrl,
       frameHash: frameResult.frameHash,
       sourceHash,
-      sourceBuffer: srcBuffer,
+      sourceBuffer: toStableArrayBuffer(srcBuffer),
     };
   }
 
   async function concatVideosLocal(sourceBuffer, generatedVideoUrl) {
+    const sourceStable = toStableArrayBuffer(sourceBuffer);
     const generatedBuffer = await fetchArrayBuffer(generatedVideoUrl);
     const trimSeconds = (Math.max(0, lockedTimestampMs) / 1000).toFixed(3);
 
@@ -1471,7 +1493,7 @@
       const segB = `${prefix}_b.mp4`;
       const listFile = `${prefix}_list.txt`;
       const mergedFile = `${prefix}_merged.mp4`;
-      await ffmpegWriteFile(ff, segASource, sourceBuffer);
+      await ffmpegWriteFile(ff, segASource, sourceStable);
       await ffmpegWriteFile(ff, segBSource, generatedBuffer);
       if (Number(trimSeconds) > 0) {
         await ffmpegExec(
@@ -1504,7 +1526,7 @@
       await ffmpegDeleteFileSafe(ff, segB);
       await ffmpegDeleteFileSafe(ff, listFile);
       await ffmpegDeleteFileSafe(ff, mergedFile);
-      return new Blob([merged], { type: 'video/mp4' });
+      return new Blob([toStableUint8(merged)], { type: 'video/mp4' });
     };
 
     try {
