@@ -24,6 +24,11 @@
         padding-right: 116px;
         min-height: 84px;
       }
+      .prompt-enhance-wrap.lightbox-mode {
+        flex: 1;
+        min-width: 0;
+        width: 100%;
+      }
       .prompt-enhance-wrap.lightbox-mode > .inline-send-inside {
         position: absolute;
         left: 10px;
@@ -312,6 +317,15 @@
       if (sendBtn instanceof HTMLButtonElement) {
         sendBtn.classList.add('inline-send-inside');
       }
+      setTimeout(() => {
+        const lateBtn = wrapper.parentElement
+          ? wrapper.parentElement.querySelector('#lightboxEditSend, .lightbox-edit-send')
+          : null;
+        if (lateBtn instanceof HTMLButtonElement && lateBtn.parentElement !== wrapper) {
+          wrapper.appendChild(lateBtn);
+          lateBtn.classList.add('inline-send-inside');
+        }
+      }, 0);
     }
 
     const langBtn = document.createElement('button');
