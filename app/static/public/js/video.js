@@ -1266,6 +1266,14 @@
     return raw.replace(/\/+$/, '');
   }
 
+  function normalizePlayableVideoUrl(url) {
+    let raw = String(url || '').trim();
+    if (!raw) return '';
+    raw = raw.replace(/[)\]>.,;]+$/g, '');
+    raw = raw.replace(/(\.mp4)\/+$/i, '$1');
+    return raw;
+  }
+
   async function loadCachedVideos() {
     const authHeader = await ensurePublicKey();
     if (authHeader === null) {
@@ -1712,7 +1720,7 @@
           closeSafe();
           if ((info && info.url) || anyUrl) {
             done = true;
-            resolve((info && info.url) || anyUrl);
+            resolve(normalizePlayableVideoUrl((info && info.url) || anyUrl));
             return;
           }
           done = true;
@@ -1740,7 +1748,7 @@
           if ((info && info.url) || payloadUrl) {
             closeSafe();
             done = true;
-            resolve((info && info.url) || payloadUrl);
+            resolve(normalizePlayableVideoUrl((info && info.url) || payloadUrl));
           }
         }
       };
@@ -1844,7 +1852,8 @@
   }
 
   async function concatVideosLocal(sourceBuffer, generatedVideoUrl) {
-    const generatedBuffer = await fetchArrayBuffer(generatedVideoUrl);
+    const safeGeneratedUrl = normalizePlayableVideoUrl(generatedVideoUrl);
+    const generatedBuffer = await fetchArrayBuffer(safeGeneratedUrl);
     const sourceStable = toStableArrayBuffer(sourceBuffer);
 
     const runOnce = async () => {
@@ -1932,7 +1941,7 @@
     try {
       return await runOnce();
     } catch (e) {
-      if (isFsError(e)) {
+      if (String(e && e.message ? e.message : e) !== 'edit_cancelled') {
         return await runOnce();
       }
       throw e;
