@@ -38,8 +38,8 @@ def _short_text(value: Any, max_len: int = 240) -> Any:
 
 
 def _sanitize_payload(value: Any, depth: int = 0) -> Any:
-    if depth > 4:
-        return "..."
+    if depth > 8:
+        return "<depth_limited>"
     if isinstance(value, dict):
         result = {}
         for key, item in value.items():
