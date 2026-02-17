@@ -1182,6 +1182,8 @@
     if (videoEl) {
       videoEl.controls = true;
       videoEl.preload = 'metadata';
+      videoEl.setAttribute('playsinline', '');
+      videoEl.setAttribute('webkit-playsinline', '');
       const source = videoEl.querySelector('source');
       if (source && source.getAttribute('src')) {
         videoUrl = source.getAttribute('src');
@@ -1199,7 +1201,7 @@
     const body = container.querySelector('.video-item-body');
     if (!body) return;
     const actions = body.querySelector('.video-item-actions-overlay');
-    body.innerHTML = `\n      <video controls preload="metadata">\n        <source src="${safeUrl}" type="video/mp4">\n      </video>\n    `;
+    body.innerHTML = `\n      <video controls preload="metadata" playsinline webkit-playsinline>\n        <source src="${safeUrl}" type="video/mp4">\n      </video>\n    `;
     if (actions) {
       body.appendChild(actions);
     }

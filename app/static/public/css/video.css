@@ -11,6 +11,7 @@
 body {
   background-color: var(--video-bg);
   background-image: none;
+  overflow-x: hidden;
 }
 
 .video-header-row {
@@ -658,6 +659,8 @@ body {
 }
 
 .edit-preview-wrap {
+  width: 100%;
+  max-width: 100%;
   border-radius: 10px;
   background: #000;
   overflow: hidden;
@@ -665,9 +668,13 @@ body {
 }
 
 #editVideo {
+  display: block;
   width: 100%;
+  height: auto;
+  max-width: 100%;
   max-height: 420px;
   background: #000;
+  object-fit: contain;
 }
 
 .edit-slider-wrap {
@@ -778,9 +785,13 @@ body {
 
 #mergeVideoPreviewA,
 #mergeVideoPreviewB {
+  display: block;
   width: 100%;
+  height: auto;
+  max-width: 100%;
   max-height: 240px;
   background: #000;
+  object-fit: contain;
 }
 
 #mergeTimelineA,
@@ -1035,7 +1046,12 @@ html[data-theme='dark'] .cache-video-item.is-active .cache-video-thumb-wrap {
   }
 
   .video-item video {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: 100%;
     max-height: 240px;
+    object-fit: contain;
   }
 
   .video-item-actions {
@@ -1049,8 +1065,16 @@ html[data-theme='dark'] .cache-video-item.is-active .cache-video-thumb-wrap {
     font-size: 10px;
   }
 
+  .edit-preview-wrap {
+    max-height: 62vh;
+  }
+
   #editVideo {
-    max-height: 260px;
+    max-height: 60vh;
+  }
+
+  .manual-merge-col .edit-preview-wrap {
+    max-height: 44vh;
   }
 
   .manual-merge-grid {

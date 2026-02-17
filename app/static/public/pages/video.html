@@ -151,7 +151,7 @@
                 <div class="meta-item"><div class="meta-label">历史数量</div><div id="historyCount" class="meta-value">0</div></div>
               </div>
               <div class="edit-preview-wrap">
-                <video id="editVideo" controls preload="metadata"></video>
+                <video id="editVideo" controls preload="metadata" playsinline webkit-playsinline></video>
               </div>
               <div class="edit-slider-wrap">
                 <input id="editTimeline" class="timeline-delete-zone" data-delete-side="right" type="range" min="0" max="100000" step="1" value="0">
@@ -194,7 +194,7 @@
                   <div class="manual-merge-col">
                     <div class="meta-label">视频1拼接帧（向左保留）</div>
                     <div class="edit-preview-wrap">
-                      <video id="mergeVideoPreviewA" controls preload="metadata"></video>
+                      <video id="mergeVideoPreviewA" controls preload="metadata" playsinline webkit-playsinline></video>
                     </div>
                     <div class="edit-slider-wrap">
                       <input id="mergeTimelineA" class="timeline-delete-zone" data-delete-side="right" type="range" min="0" max="100000" step="1" value="0">
@@ -207,7 +207,7 @@
                   <div class="manual-merge-col">
                     <div class="meta-label">视频2拼接帧（向右保留）</div>
                     <div class="edit-preview-wrap">
-                      <video id="mergeVideoPreviewB" controls preload="metadata"></video>
+                      <video id="mergeVideoPreviewB" controls preload="metadata" playsinline webkit-playsinline></video>
                     </div>
                     <div class="edit-slider-wrap">
                       <input id="mergeTimelineB" class="timeline-delete-zone" data-delete-side="left" type="range" min="0" max="100000" step="1" value="0">
