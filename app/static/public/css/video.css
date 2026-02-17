@@ -665,6 +665,13 @@ body {
   display: none;
 }
 
+.edit-panel {
+  position: static !important;
+  max-height: none !important;
+  overflow: visible !important;
+  z-index: auto !important;
+}
+
 .edit-preview-wrap {
   width: 100%;
   max-width: 100%;
@@ -1085,12 +1092,6 @@ html[data-theme='dark'] .cache-video-item.is-active .cache-video-thumb-wrap {
     height: 24px;
     padding: 0 8px;
     font-size: 10px;
-  }
-
-  .edit-panel {
-    max-height: calc(100vh - 120px);
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
   }
 
   .edit-preview-wrap {
