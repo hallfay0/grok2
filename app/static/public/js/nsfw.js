@@ -62,6 +62,7 @@
     editProgressHideTimer: null,
     editProgressStartedAt: 0,
     editDurationEstimateMs: 14000,
+    imageFullscreen: false,
   };
   if (lightboxEditSend) {
     lightboxEditSend.disabled = true;
@@ -125,6 +126,12 @@
     el.textContent = text;
     el.classList.remove('running', 'done', 'error');
     if (cls) el.classList.add(cls);
+  }
+
+  function setLightboxImageFullscreen(enabled) {
+    if (!lightbox) return;
+    state.imageFullscreen = Boolean(enabled);
+    lightbox.classList.toggle('image-focus-mode', state.imageFullscreen);
   }
 
   function updateCounters() {
@@ -691,6 +698,7 @@
     if (!lightbox || !lightboxImg) return;
     if (index < 0 || index >= state.candidates.length) return;
     state.lightboxIndex = index;
+    setLightboxImageFullscreen(false);
     const candidate = state.candidates[index];
     if (!candidate) return;
     lightboxImg.src = String(candidate.imageUrl || '').trim();
@@ -724,6 +732,7 @@
 
   function closeLightboxView() {
     if (!lightbox) return;
+    setLightboxImageFullscreen(false);
     lightbox.classList.remove('active');
     setLightboxKeyboardShift(0);
     state.lightboxIndex = -1;
@@ -1665,6 +1674,7 @@
     if (lightboxImg) {
       lightboxImg.addEventListener('click', (e) => {
         e.stopPropagation();
+        setLightboxImageFullscreen(!state.imageFullscreen);
       });
     }
     if (lightboxEditor) {
@@ -1716,10 +1726,16 @@
   document.addEventListener('keydown', (e) => {
     if (!lightbox || !lightbox.classList.contains('active')) return;
     if (e.key === 'Escape') {
+      if (state.imageFullscreen) {
+        setLightboxImageFullscreen(false);
+        return;
+      }
       closeLightboxView();
     } else if (e.key === 'ArrowLeft') {
+      setLightboxImageFullscreen(false);
       showPrevLightboxImage();
     } else if (e.key === 'ArrowRight') {
+      setLightboxImageFullscreen(false);
       showNextLightboxImage();
     }
   });

@@ -366,6 +366,21 @@ html[data-theme='dark'] .candidate-meta {
   transform: translateY(calc(var(--keyboard-shift) * -0.35));
 }
 
+.image-lightbox.image-focus-mode img {
+  max-width: 100vw;
+  max-height: 100vh;
+  border-radius: 0;
+  box-shadow: none;
+  transform: none;
+}
+
+.image-lightbox.image-focus-mode .lightbox-editor,
+.image-lightbox.image-focus-mode .lightbox-nav,
+.image-lightbox.image-focus-mode .lightbox-close {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .lightbox-close {
   position: absolute;
   top: 20px;

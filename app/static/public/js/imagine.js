@@ -56,6 +56,7 @@
   let editProgressStartedAt = 0;
   let editDurationEstimateMs = 14000;
   let wsPausedByEdit = false;
+  let lightboxImageFullscreen = false;
   let finalMinBytesDefault = 100000;
   const lightboxHistoryByItem = new WeakMap();
   if (lightboxEditSend) {
@@ -162,6 +163,12 @@
   }
 
   function updateError(value) {}
+
+  function setLightboxImageFullscreen(enabled) {
+    if (!lightbox) return;
+    lightboxImageFullscreen = Boolean(enabled);
+    lightbox.classList.toggle('image-focus-mode', lightboxImageFullscreen);
+  }
 
   function setLightboxKeyboardShift(px) {
     if (!lightbox) return;
@@ -1828,6 +1835,7 @@
     if (index < 0 || index >= images.length) return;
     
     currentImageIndex = index;
+    setLightboxImageFullscreen(false);
     lightboxImg.src = images[index].src;
     const item = getItemByImageIndex(index);
     renderLightboxHistory(item);
@@ -2007,6 +2015,7 @@
   if (lightbox && closeLightbox) {
     closeLightbox.addEventListener('click', (e) => {
       e.stopPropagation();
+      setLightboxImageFullscreen(false);
       lightbox.classList.remove('active');
       setLightboxKeyboardShift(0);
       currentImageIndex = -1;
@@ -2024,6 +2033,7 @@
     });
 
     lightbox.addEventListener('click', () => {
+      setLightboxImageFullscreen(false);
       lightbox.classList.remove('active');
       setLightboxKeyboardShift(0);
       currentImageIndex = -1;
@@ -2044,6 +2054,7 @@
     if (lightboxImg) {
       lightboxImg.addEventListener('click', (e) => {
         e.stopPropagation();
+        setLightboxImageFullscreen(!lightboxImageFullscreen);
       });
     }
 
@@ -2098,6 +2109,10 @@
       if (!lightbox.classList.contains('active')) return;
       
       if (e.key === 'Escape') {
+        if (lightboxImageFullscreen) {
+          setLightboxImageFullscreen(false);
+          return;
+        }
         lightbox.classList.remove('active');
         setLightboxKeyboardShift(0);
         currentImageIndex = -1;
@@ -2113,8 +2128,10 @@
         renderLightboxHistory(null);
         resumeWsAfterEdit();
       } else if (e.key === 'ArrowLeft') {
+        setLightboxImageFullscreen(false);
         showPrevImage();
       } else if (e.key === 'ArrowRight') {
+        setLightboxImageFullscreen(false);
         showNextImage();
       }
     });
