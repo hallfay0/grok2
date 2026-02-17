@@ -1103,32 +1103,45 @@
     content.style.right = 'auto';
     content.style.bottom = 'auto';
     content.style.transform = 'none';
+    content.style.maxWidth = 'min(560px, calc(100vw - 24px))';
     const rect = anchor.getBoundingClientRect();
     const margin = 8;
     const vw = window.innerWidth || document.documentElement.clientWidth || 0;
     const vh = window.innerHeight || document.documentElement.clientHeight || 0;
-    const width = Math.min(560, Math.max(280, vw - 24));
-    let left = rect.left + (rect.width / 2) - (width / 2);
-    if (left + width > vw - 12) {
-      left = vw - 12 - width;
+    const contentWidth = Math.round(content.getBoundingClientRect().width || Math.min(560, Math.max(280, vw - 24)));
+    const contentHeight = Math.round(content.getBoundingClientRect().height || 420);
+    let left = rect.left;
+    if (left + contentWidth > vw - 12) {
+      left = vw - 12 - contentWidth;
     }
     if (left < 12) left = 12;
     let top = rect.bottom + margin;
-    const maxTop = vh - 120;
-    if (top > maxTop) {
-      top = Math.max(12, rect.top - margin - 420);
+    if (top + contentHeight > vh - 12) {
+      top = rect.top - margin - contentHeight;
+    }
+    if (top < 12) {
+      top = 12;
     }
     content.style.left = `${Math.round(left)}px`;
     content.style.top = `${Math.round(top)}px`;
   }
 
+  function ensureCacheModalInBody() {
+    if (!cacheVideoModal) return;
+    if (cacheVideoModal.parentElement !== document.body) {
+      document.body.appendChild(cacheVideoModal);
+    }
+  }
+
   function openCacheVideoModal(anchorEl) {
     if (!cacheVideoModal) return;
+    ensureCacheModalInBody();
     cacheModalAnchorEl = anchorEl instanceof HTMLElement ? anchorEl : null;
     cacheVideoModal.classList.remove('hidden');
     cacheVideoModal.classList.add('is-open');
     positionCacheVideoModal();
     requestAnimationFrame(() => positionCacheVideoModal());
+    setTimeout(() => positionCacheVideoModal(), 0);
   }
 
   function closeCacheVideoModal() {
