@@ -1857,7 +1857,6 @@
     const sourceStable = toStableArrayBuffer(sourceBuffer);
 
     const runOnce = async () => {
-      await resetFfmpegInstance();
       const ff = await ensureFfmpeg();
       const prefix = ffTaskPrefix('concat');
       const segASource = `${prefix}_a_source.mp4`;
@@ -1938,14 +1937,22 @@
       }
     };
 
-    try {
-      return await runOnce();
-    } catch (e) {
-      if (String(e && e.message ? e.message : e) !== 'edit_cancelled') {
+    let lastErr = null;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        await resetFfmpegInstance();
         return await runOnce();
+      } catch (e) {
+        lastErr = e;
+        const msg = String(e && e.message ? e.message : e);
+        if (msg === 'edit_cancelled') {
+          throw e;
+        }
+      } finally {
+        await resetFfmpegInstance();
       }
-      throw e;
     }
+    throw lastErr || new Error('concat_failed');
   }
 
   async function concatTwoVideosManual(videoAUrl, videoBUrl, cutAMs, cutBMs) {
