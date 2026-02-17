@@ -477,6 +477,7 @@ def validate_request(request: ChatCompletionRequest):
         effective_stream = (
             request.stream if request.stream is not None else get_config("app.stream")
         )
+        config_fields_set = set(getattr(config, "model_fields_set", set()))
         ratio_map = {
             "1280x720": "16:9",
             "720x1280": "9:16",
@@ -517,11 +518,13 @@ def validate_request(request: ChatCompletionRequest):
                 param="video_config.preset",
                 code="invalid_preset",
             )
-        resolved_video_n = (
-            config.n
-            if config.n is not None
-            else (config.concurrent if config.concurrent is not None else request.n)
-        )
+        resolved_video_n = None
+        if config.n is not None:
+            resolved_video_n = config.n
+        elif request.n is not None:
+            resolved_video_n = request.n
+        elif "concurrent" in config_fields_set and config.concurrent is not None:
+            resolved_video_n = config.concurrent
         if resolved_video_n is None:
             resolved_video_n = 1
         if resolved_video_n < 1 or resolved_video_n > 4:
@@ -700,7 +703,7 @@ async def chat_completions(request: ChatCompletionRequest):
     if model_info and model_info.is_video:
         # 提取视频配置 (默认值在 Pydantic 模型中处理)
         v_conf = request.video_config or VideoConfig()
-        video_concurrent = int(v_conf.n or v_conf.concurrent or request.n or 1)
+        video_concurrent = int(v_conf.n or request.n or v_conf.concurrent or 1)
         if video_concurrent <= 1:
             result = await VideoService.completions(
                 model=request.model,
