@@ -8,6 +8,7 @@ import uuid
 from typing import Dict, List, Any, AsyncGenerator, AsyncIterable
 
 import orjson
+from curl_cffi.requests import AsyncSession
 from curl_cffi.requests.errors import RequestsError
 
 from app.core.logger import logger
@@ -24,7 +25,6 @@ from app.services.grok.utils.upload import UploadService
 from app.services.grok.utils import process as proc_base
 from app.services.grok.utils.retry import pick_token, rate_limited
 from app.services.reverse.app_chat import AppChatReverse
-from app.services.reverse.utils.session import ResettableSession
 from app.services.grok.utils.stream import wrap_stream_with_usage
 from app.services.token import get_token_manager, EffortType
 
@@ -33,7 +33,7 @@ _CHAT_SEMAPHORE = None
 _CHAT_SEM_VALUE = None
 
 
-def extract_tool_text(raw: str, rollout_id: str = "") -> str:
+def extract_tool_text(raw: str) -> str:
     if not raw:
         return ""
     name_match = re.search(
@@ -60,14 +60,12 @@ def extract_tool_text(raw: str, rollout_id: str = "") -> str:
 
     label = name
     text = args
-    prefix = f"[{rollout_id}]" if rollout_id else ""
-
     if name == "web_search":
-        label = f"{prefix}[WebSearch]"
+        label = "[WebSearch]"
         if isinstance(payload, dict):
             text = payload.get("query") or payload.get("q") or ""
     elif name == "search_images":
-        label = f"{prefix}[SearchImage]"
+        label = "[SearchImage]"
         if isinstance(payload, dict):
             text = (
                 payload.get("image_description")
@@ -76,7 +74,7 @@ def extract_tool_text(raw: str, rollout_id: str = "") -> str:
                 or ""
             )
     elif name == "chatroom_send":
-        label = f"{prefix}[AgentThink]"
+        label = "[AgentThink]"
         if isinstance(payload, dict):
             text = payload.get("message") or ""
 
@@ -172,25 +170,30 @@ class GrokChatService:
         self,
         token: str,
         message: str,
-        model: str,
+        model: str = "grok-3",
+        requested_model: str | None = None,
         mode: str = None,
         stream: bool = None,
         file_attachments: List[str] = None,
         tool_overrides: Dict[str, Any] = None,
         model_config_override: Dict[str, Any] = None,
+        image_generation_count: int | None = None,
     ):
         """发送聊天请求"""
         if stream is None:
             stream = get_config("app.stream")
 
         logger.debug(
-            f"Chat request: model={model}, mode={mode}, stream={stream}, attachments={len(file_attachments or [])}"
+            "Chat request: "
+            f"requested_model={requested_model or model}, "
+            f"upstream_model={model}, mode={mode}, stream={stream}, "
+            f"attachments={len(file_attachments or [])}"
         )
 
         browser = get_config("proxy.browser")
 
         async def _stream():
-            session = ResettableSession(impersonate=browser)
+            session = AsyncSession(impersonate=browser)
             try:
                 async with _get_chat_semaphore():
                     stream_response = await AppChatReverse.request(
@@ -198,20 +201,27 @@ class GrokChatService:
                         token,
                         message=message,
                         model=model,
+                        requested_model=requested_model,
                         mode=mode,
                         file_attachments=file_attachments,
                         tool_overrides=tool_overrides,
                         model_config_override=model_config_override,
+                        image_generation_count=image_generation_count,
                     )
-                    logger.info(f"Chat connected: model={model}, stream={stream}")
+                    logger.info(
+                        "Chat connected: "
+                        f"requested_model={requested_model or model}, "
+                        f"upstream_model={model}, mode={mode}, stream={stream}"
+                    )
                     async for line in stream_response:
                         yield line
             except Exception:
+                raise
+            finally:
                 try:
                     await session.close()
                 except Exception:
                     pass
-                raise
 
         return _stream()
 
@@ -269,11 +279,12 @@ class GrokChatService:
             model_config_override["reasoningEffort"] = reasoning_effort
 
         response = await self.chat(
-            token,
-            message,
-            grok_model,
-            mode,
-            stream,
+            token=token,
+            message=message,
+            model=grok_model,
+            requested_model=model,
+            mode=mode,
+            stream=stream,
             file_attachments=all_attachments,
             model_config_override=model_config_override,
         )
@@ -395,7 +406,6 @@ class StreamProcessor(proc_base.BaseProcessor):
         super().__init__(model, token)
         self.response_id: str = None
         self.fingerprint: str = ""
-        self.rollout_id: str = ""
         self.think_opened: bool = False
         self.role_sent: bool = False
         self.filter_tags = get_config("app.filter_tags")
@@ -424,7 +434,7 @@ class StreamProcessor(proc_base.BaseProcessor):
                     return "".join(output_parts)
                 end_pos = end_idx + len(end_tag)
                 self._tool_usage_buffer += rest[:end_pos]
-                line = extract_tool_text(self._tool_usage_buffer, self.rollout_id)
+                line = extract_tool_text(self._tool_usage_buffer)
                 if line:
                     if output_parts and not output_parts[-1].endswith("\n"):
                         output_parts[-1] += "\n"
@@ -450,7 +460,7 @@ class StreamProcessor(proc_base.BaseProcessor):
 
             end_pos = end_idx + len(end_tag)
             raw_card = rest[start_idx:end_pos]
-            line = extract_tool_text(raw_card, self.rollout_id)
+            line = extract_tool_text(raw_card)
             if line:
                 if output_parts and not output_parts[-1].endswith("\n"):
                     output_parts[-1] += "\n"
@@ -533,8 +543,6 @@ class StreamProcessor(proc_base.BaseProcessor):
                     self.fingerprint = llm.get("modelHash", "")
                 if rid := resp.get("responseId"):
                     self.response_id = rid
-                if rid := resp.get("rolloutId"):
-                    self.rollout_id = str(rid)
 
                 if not self.role_sent:
                     yield self._sse(role="assistant")
@@ -617,6 +625,7 @@ class StreamProcessor(proc_base.BaseProcessor):
             yield "data: [DONE]\n\n"
         except asyncio.CancelledError:
             logger.debug("Stream cancelled by client", extra={"model": self.model})
+            raise
         except StreamIdleTimeoutError as e:
             raise UpstreamException(
                 message=f"Stream idle timeout after {e.idle_seconds}s",
@@ -665,18 +674,11 @@ class CollectProcessor(proc_base.BaseProcessor):
 
         result = content
         if "xai:tool_usage_card" in self.filter_tags:
-            rollout_id = ""
-            rollout_match = re.search(
-                r"<rolloutId>(.*?)</rolloutId>", result, flags=re.DOTALL
-            )
-            if rollout_match:
-                rollout_id = rollout_match.group(1).strip()
-
             result = re.sub(
                 r"<xai:tool_usage_card[^>]*>.*?</xai:tool_usage_card>",
                 lambda match: (
-                    f"{extract_tool_text(match.group(0), rollout_id)}\n"
-                    if extract_tool_text(match.group(0), rollout_id)
+                    f"{extract_tool_text(match.group(0))}\n"
+                    if extract_tool_text(match.group(0))
                     else ""
                 ),
                 result,
@@ -779,6 +781,7 @@ class CollectProcessor(proc_base.BaseProcessor):
 
         except asyncio.CancelledError:
             logger.debug("Collect cancelled by client", extra={"model": self.model})
+            raise
         except StreamIdleTimeoutError as e:
             logger.warning(f"Collect idle timeout: {e}", extra={"model": self.model})
         except RequestsError as e:

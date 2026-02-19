@@ -3,12 +3,19 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content">
   <title>Grok2API - Public</title>
   <link rel="icon" href="/static/common/img/favicon/favicon.ico">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-sans/style.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-mono/style.css" rel="stylesheet">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#fafafa">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Grok2API">
+  <link rel="apple-touch-icon" href="/static/public/pwa/apple-touch-icon.png">
+  <script src="/static/vendor/tailwind/tailwindcss-cdn.js"></script>
+  <link href="/static/vendor/geist/geist-sans.css" rel="stylesheet">
+  <link href="/static/vendor/geist/geist-mono.css" rel="stylesheet">
   <script>
     tailwind.config = {
       theme: {
@@ -24,8 +31,9 @@
       }
     }
   </script>
-  <link href="/static/common/css/common.css?v=0.3.1" rel="stylesheet">
-  <link href="/static/common/css/login.css?v=0.3.1" rel="stylesheet">
+  <script src="/static/common/js/theme.js?v=0.1.0"></script>
+  <link href="/static/common/css/common.css?v=0.3.7" rel="stylesheet">
+  <link href="/static/common/css/login.css?v=0.3.0" rel="stylesheet">
   <link href="/static/common/css/toast.css" rel="stylesheet">
 </head>
 
@@ -59,10 +67,11 @@
 
   <div id="app-footer"></div>
 
-  <script src="/static/common/js/admin-auth.js?v=0.3.1"></script>
+  <script src="/static/common/js/admin-auth.js?v=0.3.0"></script>
   <script src="/static/common/js/toast.js"></script>
-  <script src="/static/common/js/footer.js?v=0.3.1"></script>
-  <script src="/static/public/js/login.js?v=0.3.1"></script>
+  <script src="/static/common/js/footer.js?v=0.3.0"></script>
+  <script src="/static/common/js/pwa.js?v=0.1.1"></script>
+  <script src="/static/public/js/login.js?v=0.3.0"></script>
 </body>
 
 </html>

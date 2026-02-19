@@ -356,3 +356,123 @@
       background: #e5e5e5;
       margin: 0 4px;
     }
+
+    html[data-theme='dark'] #status-tabs {
+      background: #18212d;
+      border: 1px solid #2b3440;
+    }
+
+    html[data-theme='dark'] .tab-item {
+      color: #a8b3c4;
+    }
+
+    html[data-theme='dark'] .tab-item:hover {
+      color: #e6edf3;
+      background: rgba(230, 237, 243, 0.08);
+    }
+
+    html[data-theme='dark'] .tab-item.active {
+      color: #e6edf3;
+      background: #243041;
+    }
+
+    html[data-theme='dark'] .tab-sep {
+      background: #344051;
+    }
+
+    html[data-theme='dark'] .badge {
+      background: #243041;
+      color: #cbd5e1;
+    }
+
+    html[data-theme='dark'] .badge-gray {
+      background: #2a3342;
+      color: #cbd5e1;
+    }
+
+    html[data-theme='dark'] .badge-green {
+      background: rgba(16, 185, 129, 0.18);
+      color: #6ee7b7;
+    }
+
+    html[data-theme='dark'] .badge-orange {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+    }
+
+    html[data-theme='dark'] .badge-red {
+      background: rgba(239, 68, 68, 0.2);
+      color: #fca5a5;
+    }
+
+    html[data-theme='dark'] .badge-purple {
+      background: rgba(168, 85, 247, 0.22);
+      color: #d8b4fe;
+    }
+
+    @media (max-width: 900px) {
+      .pagination-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .pagination-bar > div {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .pagination-bar #pagination-info {
+        justify-content: flex-start;
+      }
+
+      .pagination-bar .geist-button-outline,
+      .pagination-bar .geist-button {
+        flex: 1;
+        min-width: 110px;
+      }
+
+      #page-size {
+        width: 100%;
+      }
+
+      #batch-actions {
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        transform: none;
+        border-radius: 14px;
+        padding: 10px;
+        white-space: normal;
+        gap: 8px;
+      }
+
+      #batch-actions .toolbar-sep {
+        display: none;
+      }
+
+      #batch-actions .batch-action-buttons {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      #batch-actions .batch-action-buttons .geist-button-outline,
+      #batch-actions .batch-action-buttons .geist-button-danger {
+        flex: 1;
+        min-width: 110px;
+        justify-content: center;
+      }
+
+      #batch-actions #batch-progress {
+        width: 100%;
+        flex-wrap: wrap;
+      }
+
+      .modal-content {
+        max-height: calc(100dvh - 32px);
+        overflow: auto;
+      }
+    }

@@ -27,6 +27,7 @@ class AppChatReverse:
         file_attachments: List[str] = None,
         tool_overrides: Dict[str, Any] = None,
         model_config_override: Dict[str, Any] = None,
+        image_generation_count: int | None = None,
     ) -> Dict[str, Any]:
         """Build chat payload for Grok app-chat API."""
 
@@ -52,7 +53,9 @@ class AppChatReverse:
             "forceConcise": False,
             "forceSideBySide": False,
             "imageAttachments": [],
-            "imageGenerationCount": 2,
+            "imageGenerationCount": image_generation_count
+            if image_generation_count is not None
+            else 2,
             "isAsyncChat": False,
             "isReasoning": False,
             "message": message,
@@ -79,10 +82,12 @@ class AppChatReverse:
         token: str,
         message: str,
         model: str,
+        requested_model: str | None = None,
         mode: str = None,
         file_attachments: List[str] = None,
         tool_overrides: Dict[str, Any] = None,
         model_config_override: Dict[str, Any] = None,
+        image_generation_count: int | None = None,
     ) -> Any:
         """Send app chat request to Grok.
         
@@ -120,6 +125,16 @@ class AppChatReverse:
                 file_attachments=file_attachments,
                 tool_overrides=tool_overrides,
                 model_config_override=model_config_override,
+                image_generation_count=image_generation_count,
+            )
+            logger.info(
+                "AppChat request prepared: "
+                f"requested_model={requested_model or model}, "
+                f"upstream_model={model}, "
+                f"mode={mode or '-'}, "
+                f"message_len={len(message or '')}, "
+                f"file_attachments={len(file_attachments or [])}, "
+                f"tools={','.join((tool_overrides or {}).keys()) or '-'}"
             )
 
             # Curl Config
@@ -176,11 +191,8 @@ class AppChatReverse:
 
             # Stream response
             async def stream_response():
-                try:
-                    async for line in response.aiter_lines():
-                        yield line
-                finally:
-                    await session.close()
+                async for line in response.aiter_lines():
+                    yield line
 
             return stream_response()
 

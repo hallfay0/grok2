@@ -3,14 +3,15 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content">
   <title>Grok2API - Token 管理</title>
   <link rel="icon" href="/static/common/img/favicon/favicon.ico">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-sans/style.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-mono/style.css" rel="stylesheet">
-  <link href="/static/common/css/common.css?v=0.3.1" rel="stylesheet">
-  <link href="/static/admin/css/token.css?v=0.3.1" rel="stylesheet">
+  <script src="/static/vendor/tailwind/tailwindcss-cdn.js"></script>
+  <link href="/static/vendor/geist/geist-sans.css" rel="stylesheet">
+  <link href="/static/vendor/geist/geist-mono.css" rel="stylesheet">
+  <script src="/static/common/js/theme.js?v=0.1.0"></script>
+  <link href="/static/common/css/common.css?v=0.3.7" rel="stylesheet">
+  <link href="/static/admin/css/token.css?v=0.3.0" rel="stylesheet">
   <link href="/static/common/css/toast.css" rel="stylesheet">
 </head>
 
@@ -21,15 +22,15 @@
   <div id="app-header"></div>
 
   <!-- Main Content -->
-  <main class="space-y-6 flex-1 container mx-auto max-w-5xl px-6 py-8 fade-in">
+  <main class="space-y-6 flex-1 container mx-auto max-w-5xl px-4 sm:px-6 py-6 sm:py-8 fade-in">
 
     <div class="space-y-6">
-      <div class="flex justify-between items-center">
+      <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 class="text-2xl font-semibold tracking-tight">Token 列表</h2>
           <p class="text-[var(--accents-4)] mt-1 text-sm">管理 Grok2API 的 Token 服务号池。</p>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex w-full flex-wrap items-center gap-2 md:w-auto md:gap-3">
           <button onclick="openImportModal()" class="geist-button-outline gap-2">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
               stroke-linecap="round" stroke-linejoin="round">
@@ -51,7 +52,7 @@
       <div class="h-px bg-[var(--border)] my-6"></div>
 
       <!-- Statistics -->
-      <div class="grid grid-cols-4 gap-4 mb-6" id="stats-container">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6" id="stats-container">
         <!-- Row 1 -->
         <div class="stat-card">
           <div class="stat-value" id="stat-total">-</div>
@@ -176,7 +177,7 @@
       <span class="text-[var(--accents-5)] text-xs">项</span>
     </div>
     <span class="toolbar-sep"></span>
-    <div class="flex items-center gap-1">
+    <div class="batch-action-buttons flex items-center gap-1">
       <button id="btn-batch-export" onclick="batchExport()"
         class="geist-button-outline text-xs px-3 gap-1 border-0 hover:bg-gray-100">
         导出
@@ -292,12 +293,12 @@
   </div>
 
   <script src="/static/common/js/draggable.js"></script>
-  <script src="/static/common/js/admin-auth.js?v=0.3.1"></script>
-  <script src="/static/common/js/batch-sse.js?v=0.3.1"></script>
+  <script src="/static/common/js/admin-auth.js?v=0.3.0"></script>
+  <script src="/static/common/js/batch-sse.js?v=0.3.0"></script>
   <script src="/static/common/js/header.js?v=0.3.1"></script>
-  <script src="/static/common/js/footer.js?v=0.3.1"></script>
+  <script src="/static/common/js/footer.js?v=0.3.0"></script>
   <script src="/static/common/js/toast.js"></script>
-  <script src="/static/admin/js/token.js?v=0.3.1"></script>
+  <script src="/static/admin/js/token.js?v=0.3.0"></script>
 </body>
 
 </html>

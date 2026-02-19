@@ -2,6 +2,7 @@
 Chat Completions API 路由
 """
 
+import asyncio
 from typing import Any, Dict, List, Optional, Union
 import base64
 import binascii
@@ -35,6 +36,8 @@ class VideoConfig(BaseModel):
     video_length: Optional[int] = Field(6, description="视频时长(秒): 6 / 10 / 15")
     resolution_name: Optional[str] = Field("480p", description="视频分辨率: 480p, 720p")
     preset: Optional[str] = Field("custom", description="风格预设: fun, normal, spicy")
+    n: Optional[int] = Field(None, ge=1, le=4, description="生成数量 (1-4，仅非流式)")
+    concurrent: Optional[int] = Field(1, ge=1, le=4, description="并发视频数 (1-4，仅非流式)")
 
 class ImageConfig(BaseModel):
     """图片生成配置"""
@@ -53,6 +56,7 @@ class ChatCompletionRequest(BaseModel):
     reasoning_effort: Optional[str] = Field(None, description="推理强度: none/minimal/low/medium/high/xhigh")
     temperature: Optional[float] = Field(0.8, description="采样温度: 0-2")
     top_p: Optional[float] = Field(0.95, description="nucleus 采样: 0-1")
+    n: Optional[int] = Field(None, ge=1, le=10, description="通用生成数量（视频可作为并发回退）")
     # 视频生成配置
     video_config: Optional[VideoConfig] = Field(None, description="视频生成参数")
     # 图片生成配置
@@ -450,10 +454,30 @@ def validate_request(request: ChatCompletionRequest):
                 param="messages",
                 code="missing_image",
             )
+        if len(image_urls) > 3:
+            raise ValidationException(
+                message="Too many image_url references. Maximum is 3.",
+                param="messages",
+                code="invalid_image_count",
+            )
+        image_conf = request.image_config or ImageConfig()
+        n = image_conf.n or 1
+        if n != 1:
+            raise ValidationException(
+                message="For image edits, image_config.n must be 1.",
+                param="image_config.n",
+                code="invalid_n",
+            )
+        image_conf.n = 1
+        request.image_config = image_conf
 
     # video 验证
     if model_info and model_info.is_video:
         config = request.video_config or VideoConfig()
+        effective_stream = (
+            request.stream if request.stream is not None else get_config("app.stream")
+        )
+        config_fields_set = set(getattr(config, "model_fields_set", set()))
         ratio_map = {
             "1280x720": "16:9",
             "720x1280": "9:16",
@@ -494,6 +518,29 @@ def validate_request(request: ChatCompletionRequest):
                 param="video_config.preset",
                 code="invalid_preset",
             )
+        resolved_video_n = None
+        if config.n is not None:
+            resolved_video_n = config.n
+        elif request.n is not None:
+            resolved_video_n = request.n
+        elif "concurrent" in config_fields_set and config.concurrent is not None:
+            resolved_video_n = config.concurrent
+        if resolved_video_n is None:
+            resolved_video_n = 1
+        if resolved_video_n < 1 or resolved_video_n > 4:
+            raise ValidationException(
+                message="video n must be between 1 and 4",
+                param="video_config.n",
+                code="invalid_concurrent",
+            )
+        if bool(effective_stream) and resolved_video_n > 1:
+            raise ValidationException(
+                message="Streaming is only supported when video_config.n=1",
+                param="video_config.n",
+                code="invalid_stream_concurrent",
+            )
+        config.n = int(resolved_video_n)
+        config.concurrent = int(resolved_video_n)
         request.video_config = config
 
 
@@ -520,7 +567,8 @@ async def chat_completions(request: ChatCompletionRequest):
                 param="image",
                 code="missing_image",
             )
-        image_url = image_urls[-1]
+        # image edit 支持最多 3 张参考图
+        image_refs = image_urls[:3]
 
         is_stream = (
             request.stream if request.stream is not None else get_config("app.stream")
@@ -529,7 +577,7 @@ async def chat_completions(request: ChatCompletionRequest):
         _validate_image_config(image_conf, stream=bool(is_stream))
         response_format = _resolve_image_format(image_conf.response_format)
         response_field = _image_field(response_format)
-        n = image_conf.n or 1
+        n = 1
 
         token_mgr = await get_token_manager()
         await token_mgr.reload_if_stale()
@@ -553,7 +601,7 @@ async def chat_completions(request: ChatCompletionRequest):
             token=token,
             model_info=model_info,
             prompt=prompt,
-            images=[image_url],
+            images=image_refs,
             n=n,
             response_format=response_format,
             stream=bool(is_stream),
@@ -655,17 +703,76 @@ async def chat_completions(request: ChatCompletionRequest):
     if model_info and model_info.is_video:
         # 提取视频配置 (默认值在 Pydantic 模型中处理)
         v_conf = request.video_config or VideoConfig()
+        video_concurrent = int(v_conf.n or request.n or v_conf.concurrent or 1)
+        if video_concurrent <= 1:
+            result = await VideoService.completions(
+                model=request.model,
+                messages=[msg.model_dump() for msg in request.messages],
+                stream=request.stream,
+                reasoning_effort=request.reasoning_effort,
+                aspect_ratio=v_conf.aspect_ratio,
+                video_length=v_conf.video_length,
+                resolution=v_conf.resolution_name,
+                preset=v_conf.preset,
+            )
+        else:
+            messages_dump = [msg.model_dump() for msg in request.messages]
 
-        result = await VideoService.completions(
-            model=request.model,
-            messages=[msg.model_dump() for msg in request.messages],
-            stream=request.stream,
-            reasoning_effort=request.reasoning_effort,
-            aspect_ratio=v_conf.aspect_ratio,
-            video_length=v_conf.video_length,
-            resolution=v_conf.resolution_name,
-            preset=v_conf.preset,
-        )
+            async def _run_single() -> Dict[str, Any]:
+                single = await VideoService.completions(
+                    model=request.model,
+                    messages=messages_dump,
+                    stream=False,
+                    reasoning_effort=request.reasoning_effort,
+                    aspect_ratio=v_conf.aspect_ratio,
+                    video_length=v_conf.video_length,
+                    resolution=v_conf.resolution_name,
+                    preset=v_conf.preset,
+                )
+                if not isinstance(single, dict):
+                    raise ValidationException(
+                        message="video concurrent mode only supports non-stream result",
+                        param="video_config.concurrent",
+                        code="invalid_stream_concurrent",
+                    )
+                return single
+
+            results = await asyncio.gather(*[_run_single() for _ in range(video_concurrent)])
+            merged = dict(results[0]) if results else {
+                "id": "",
+                "object": "chat.completion",
+                "created": int(time.time()),
+                "model": request.model,
+                "choices": [],
+                "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+            }
+
+            choices: List[Dict[str, Any]] = []
+            usage_prompt = 0
+            usage_completion = 0
+            usage_total = 0
+            for idx, item in enumerate(results):
+                raw_choice = (
+                    item.get("choices", [{}])[0]
+                    if isinstance(item.get("choices"), list) and item.get("choices")
+                    else {}
+                )
+                choice = dict(raw_choice)
+                choice["index"] = idx
+                choices.append(choice)
+                usage = item.get("usage") or {}
+                usage_prompt += int(usage.get("prompt_tokens") or 0)
+                usage_completion += int(usage.get("completion_tokens") or 0)
+                usage_total += int(usage.get("total_tokens") or 0)
+
+            merged["created"] = int(time.time())
+            merged["choices"] = choices
+            merged["usage"] = {
+                "prompt_tokens": usage_prompt,
+                "completion_tokens": usage_completion,
+                "total_tokens": usage_total,
+            }
+            result = merged
     else:
         result = await ChatService.completions(
             model=request.model,
